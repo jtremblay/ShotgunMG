@@ -2,6 +2,7 @@
 
 This repository contains an implementation of the ShotgunMG pipeline (https://doi.org/10.1093/bib/bbac443) for Nextflow.
 
+```
 ###############################################################################
               _____ _           _                    __  __  _____ 
              / ____| |         | |                  |  \/  |/ ____|
@@ -19,3 +20,4 @@ This repository contains an implementation of the ShotgunMG pipeline (https://do
                Version: 1.4.0-beta
 
 ###############################################################################
+```
