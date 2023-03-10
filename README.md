@@ -5,13 +5,13 @@ This repository contains an implementation of the ShotgunMG pipeline (https://do
 <code>
 ###############################################################################
               _____ _           _                    __  __  _____ 
-<b>             / ____| |         | |                  |  \/  |/ ____|  
+             / ____| |         | |                  |  \/  |/ ____|  
             | (___ | |__   ___ | |_ __ _ _   _ _ __ | \  / | |  __ 
              \___ \| '_ \ / _ \| __/ _` | | | | '_ \| |\/| | | |_ |
              ____) | | | | (_) | || (_| | |_| | | | | |  | | |__| |
             |_____/|_| |_|\___/ \__\__, |\__,_|_| |_|_|  |_|\_____|
                                     __/ |                          
-                                   |___/     for N E X T F L O W 
+                                   |___/    <b> for N E X T F L O W 
 
                 Github: https://github.com/jtremblay/ShotgunMG
              Home page: jtremblay.github.io/pipelines.html
