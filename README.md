@@ -13,7 +13,7 @@ This repository contains an implementation of the ShotgunMG pipeline (https://do
                                     __/ |                          
                                    |___/                           
 
-                           for N E X T F L O W 
+                             for N E X T F L O W 
 
                 Github: https://github.com/jtremblay/ShotgunMG
              Home page: jtremblay.github.io/pipelines.html
