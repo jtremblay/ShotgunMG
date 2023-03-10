@@ -5,7 +5,7 @@ This repository contains an implementation of the ShotgunMG pipeline (https://do
 <code>
 ###############################################################################
               _____ _           _                    __  __  _____ 
-**             / ____| |         | |                  |  \/  |/ ____|  **
+<b>             / ____| |         | |                  |  \/  |/ ____|  
             | (___ | |__   ___ | |_ __ _ _   _ _ __ | \  / | |  __ 
              \___ \| '_ \ / _ \| __/ _` | | | | '_ \| |\/| | | |_ |
              ____) | | | | (_) | || (_| | |_| | | | | |  | | |__| |
@@ -15,6 +15,6 @@ This repository contains an implementation of the ShotgunMG pipeline (https://do
 
                 Github: https://github.com/jtremblay/ShotgunMG
              Home page: jtremblay.github.io/pipelines.html
-               Version: 1.4.0-beta
+               Version: 1.4.0-beta                                         </b> 
 ###############################################################################
 </code>
