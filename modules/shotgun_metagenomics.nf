@@ -121,7 +121,7 @@ process MEGAHIT {
         path(reads2)
 
     output:
-        path("megahit/final.contigs.fa"), emit: assembly
+        path("megahit/contigs.fna"), emit: assembly
         path("megahit/log"), emit: log
         path("megahit/assembly_stats.txt"), emit: stats
 
@@ -140,7 +140,7 @@ process MEGAHIT {
             ${input_R2} \\
             --memory ${requested_memory_in_bytes} \\
             --out-dir megahit && \\
-            compileAssemblyResultsSingle.pl --infile megahit/final.contigs.fa > megahit/assembly_stats.txt
+            compileAssemblyResultsSingle.pl --infile megahit/final.contigs.fa > megahit/assembly_stats.txt && mv megahit/final.contigs.fa megahit/contigs.fna
         """
 }
 
@@ -187,73 +187,1052 @@ process PRODIGAL {
         path("contigs_renamed.fna"), emit: predicted_genes_fna
         path("contigs_renamed.faa"), emit: predicted_genes_faa
         path("contigs_renamed.gff"), emit: predicted_genes_gff
+        path("contigs_raw.faa"), emit: predicted_genes_raw_faa
 
     script:
         """
         module load ${params.modules.prodigal} ${params.modules.tools} && \\
         prodigal -i ${infile} -f gff -p meta \\
-            -o contigs.gff \\
-            -a contigs.faa \\
-            -d contigs.fna && \\
+            -o contigs_raw.gff \\
+            -a contigs_raw.faa \\
+            -d contigs_raw.fna && \\
         convertProdigalNames.pl \\
-            --gff contigs.gff \\
-            --fna contigs.fna \\
-            --faa contigs.faa \\
+            --gff contigs_raw.gff \\
+            --fna contigs_raw.fna \\
+            --faa contigs_raw.faa \\
             --renamed_gff contigs_renamed.gff \\
             --renamed_faa contigs_renamed.faa \\
             > contigs_renamed.fna
         """
 }
 
-process EXONERATE {
+process EXONERATE_CONTIGS {
     debug true
-    publishDir "$params.DEFAULT.outdir/assembly/", mode: 'symlink'
+    publishDir "$params.DEFAULT.outdir/", mode: 'symlink'
     
     input:
-        val(sequence_type)
         path(infile)
 
     output:
-        path("estimated_number_of_chunks_${sequence_type}.txt"), emit: chunks
-        path("${sequence_type}_chunks/exonerate.done"), emit: done
+        path("estimated_number_of_chunks_contigs.txt"), emit: chunks
+        path("exonerate.done"), emit: done
+        path("fasta_chunks"), emit: outdir
 
     script:
-        def to_delete = ""
-        println ${infile.baseName}
-        
         """
         module load ${params.modules.exonerate} ${params.modules.tools} && \\
-        echo estimated_number_of_chunks_${sequence_type}.txt && \\
-        echo estimated_number_of_chunks_${sequence_type}.txt
+        estimateChunkFileSize.pl \\
+            --infile ${infile} \\
+            --targeted_chunk_size ${params.exonerate.targeted_chunk_file_size_contigs} > \\
+            estimated_number_of_chunks_contigs.txt && \\
+        rm -rf fasta_chunks && mkdir -p fasta_chunks && \\
+        fastasplit -f ${infile} \\
+            -o fasta_chunks \\
+            -c `cat estimated_number_of_chunks_contigs.txt` && \\
+        doublecheckExonerate.pl \\
+            --indir fasta_chunks \\
+            --prefix contigs.fna_chunk_ \\
+            --no_chunks `cat estimated_number_of_chunks_contigs.txt` && \\
+          touch exonerate.done && touch fasta_chunks
+        """
+}
+
+process EXONERATE_GENES {
+    debug true
+    publishDir "$params.DEFAULT.outdir/gene_prediction", mode: 'symlink'
+    
+    input:
+        path(infile)
+
+    output:
+        path("estimated_number_of_chunks_genes.txt"), emit: chunks
+        path("exonerate.done"), emit: done
+        path("fasta_chunks"), emit: outdir
+        env(NUMCHUNKS), emit: num_chunks
+        path("fasta_chunks/*"), emit: outfiles // Here the fact that we emit multiple files
+                                               // (using the * wildcard) means that we will
+                                               // generate a multi-file channel. Otherwise,
+                                               // it would have been a single file channel.
+
+    script:
+        """
+        module load ${params.modules.exonerate} ${params.modules.tools} && \\
+        estimateChunkFileSize.pl \\
+            --infile ${infile} \\
+            --targeted_chunk_size ${params.exonerate.targeted_chunk_file_size_genes} > \\
+            estimated_number_of_chunks_genes.txt && \\
+        rm -rf fasta_chunks && mkdir -p fasta_chunks && \\
+        fastasplit -f ${infile} \\
+            -o fasta_chunks \\
+            -c `cat estimated_number_of_chunks_genes.txt` && \\
+        doublecheckExonerate.pl \\
+            --indir fasta_chunks \\
+            --prefix contigs_renamed.faa_chunk_ \\
+            --no_chunks `cat estimated_number_of_chunks_genes.txt` && \\
+          touch exonerate.done && touch fasta_chunks && \\
+          NUMCHUNKS=\$(cat estimated_number_of_chunks_genes.txt)
+        """
+}
+
+process BEDFILE_CONTIGS {
+    debug true
+    publishDir "$params.DEFAULT.outdir/assembly/megahit", mode: 'symlink'
+    
+    input:
+        path(infile_contigs)
+
+    output:
+        path("contigs.bed"), emit: bed_contigs
+
+    script:
+        """
+        module load ${params.modules.tools} && \\
+        fastaToBed.pl --fasta ${infile_contigs} > contigs.bed
+        """
+}
+
+process BEDFILE_GENES {
+    debug true
+    publishDir "$params.DEFAULT.outdir/gene_prediction", mode: 'symlink'
+    
+    input:
+        path(infile_gff)
+
+    output:
+        path("contigs_genes.bed"), emit: bed_genes
+
+    script:
+        """
+        module load ${params.modules.tools} && \\
+        gffToBed.pl --infile ${infile_gff} > contigs_genes.bed
+        """
+}
+
+process MAKE_BWA_INDEX {
+    debug true
+    publishDir "$params.DEFAULT.outdir/assembly", mode: 'symlink'
+    ///cpus params.make_index.cluster_cpus
+    ///memory params.make_index.cluster_memory
+    ///time params.make_index.cluster_time
+    
+    input:
+        path(infile)
+
+    output:
+        path("contigs.fna.amb"), emit: amb
+        path("contigs.fna.ann"), emit: ann
+        path("contigs.fna.bwt"), emit: bwt
+        path("contigs.fna.fai"), emit: fai
+        path("contigs.fna.pac"), emit: pac
+        path("contigs.fna.sa"),  emit: sa
+
+    script:
+        """
+        module load ${params.modules.bwa} && \\
+        bwa index ${infile} && \\
+        touch contigs.fna.amb && \\
+        touch contigs.fna.ann && \\
+        touch contigs.fna.bwt && \\
+        touch contigs.fna.fai && \\
+        touch contigs.fna.pac && \\
+        touch contigs.fna.sa
+        """
+}
+
+process BWAMEM_PE {
+    debug true
+    publishDir "$params.DEFAULT.outdir/contig_abundance/bams", mode: 'symlink'
+    ///cpus params.bwa.cluster_cpus
+    ///memory params.bwa.cluster_memory
+    ///time params.bwa.cluster_time
+    
+    input:
+        path(amb)
+        path(ann)
+        path(bwt)
+        path(fai)
+        path(pac)
+        path(sa)
+        path(infile_fasta)
+        tuple val(sample_id), path(infile_R1), path(infile_R2)
+
+    output:
+        tuple val("$sample_id"), path("${sample_id}.bam"), emit: bam
+        path("${sample_id}.bam.bai"), emit: bam_index
+
+    script:
+        """
+        module load ${params.modules.bwa} ${params.modules.samtools} && \\
+        bwa mem -M \\
+          -t ${params.bwa.num_threads} \\
+          ${infile_fasta} \\
+          ${infile_R1} \\
+          ${infile_R2} \\
+          | samtools view -Sbh -F 0x100 - > ${sample_id}.bam.tmp && \\
+          samtools sort -@ ${params.bwa.num_threads} -m ${params.samtools.mem_per_thread} ${sample_id}.bam.tmp -o ${sample_id}.bam && \\
+          rm ${sample_id}.bam.tmp && \\
+          samtools index ${sample_id}.bam && touch ${sample_id}.bam.bai
+        """
+}
+
+process BEDTOOLS_COV_CONTIGS {
+    debug true
+    publishDir "$params.DEFAULT.outdir/contig_abundance/cov", mode: 'symlink'
+    
+    input:
+        tuple val(sample_id), path(bam)
+        path(bed_contigs)
+
+    output:
+        tuple val("$sample_id"), path("${sample_id}.cov"), emit: cov
+
+    script:
+        """
+        module load ${params.modules.bedtools} ${params.modules.samtools} && \\
+        samtools view -b -f 0x2 ${bam} > ${bam}.tmp && \\
+        coverageBed -abam ${bam}.tmp \\
+            -b ${bed_contigs} \\
+            -counts \\
+            > ${sample_id}.cov && \\
+        rm -f ${bam}.tmp
+        """
+}
+
+process BEDTOOLS_COV_GENES {
+    debug true
+    publishDir "$params.DEFAULT.outdir/gene_abundance/cov", mode: 'symlink'
+    
+    input:
+        tuple val(sample_id), path(bam)
+        path(bed_genes)
+
+    output:
+        tuple val(sample_id), path("${sample_id}.cov"), emit: cov
+
+    script:
+        """
+        module load ${params.modules.bedtools} ${params.modules.samtools} && \\
+        samtools view -b -f 0x2 ${bam} > ${bam}.tmp && \\
+        coverageBed -abam ${bam}.tmp \\
+            -b ${bed_genes} \\
+            -counts \\
+            > ${sample_id}.cov && \\
+        rm -f ${bam}.tmp
         """
 }
 
 /*
-        if(${infile} =~ /.faa/){
-            to_delete = ${sequence_type} + "/*.faa"
-        }else if( ${infile} =~ /.fna/){
-            to_delete = ${sequence_type} + "/*.fna"
-        }else if(file_extension =~ /.fasta/){
-            to_delete = ${sequence_type} + "/*.fasta"
-        }
-    if(${sequence_type} == "contigs"){
-        publishDir "$params.DEFAULT.outdir/assembly/", mode: 'symlink'
-    }else if(${sequence_type} == "genes"){
-        publishDir "$params.DEFAULT.outdir/gene_prediction/", mode: 'symlink'
-    }else{
-        exit 1, "Invalid sequence type for EXONERATE"
-    }
-        estimateChunkFileSize.pl \\
-            --infile {infile} \\
-            --targeted_chunk_size ${params.exonerate.targeted_chunk_file_size_${sequence_type}} > \\
-            estimated_number_of_chunks_${sequence_type}.txt && \\
-        rm -rf {to_delete} && mkdir -p ${sequence_type} && \\
-        fastasplit -f {infile} \\
-          -o ${sequence_type}_chunks/ \\
-          -c \`cat estimated_number_of_chunks_${sequence_type}.txt\` &&
-        doublecheckExonerate.pl --indir {outdir} --prefix ${infile.baseName} --no_chunks \`cat estimated_number_of_chunks_${sequence_type}.txt\` && \\
-        touch exonerate.done && \\
-        rm -rf {to_delete}
-
-
+    Can't use the same process twice?
+    Process 'MERGE_COV' has been already used -- If you need to reuse the same component, include it with a different name or include it in a different workflow context
+    Anyways, I'll leave it here if it becomes ever supported.
 */
+process MERGE_COV {
+    debug true
+    publishDir "$params.DEFAULT.outdir/${type}_abundance/", mode: 'symlink'
+    
+    input:
+        path(cov_files)
+        val(type)
+
+    output:
+        path("${type}_abundance.tsv"), emit: contig_abundance_matrix
+
+    script:
+        cov_files_comma = cov_files.toString().replaceAll(/ /, ",")
+        """
+        module load ${params.modules.perl} ${params.modules.tools} && \\
+        mergeAbundance.pl \\
+            --type contigs \\
+            --infiles ${cov_files_comma} \\
+            > ${type}_abundance.tsv
+        """
+}
+
+process MERGE_COV_CONTIGS {
+    debug true
+    publishDir "$params.DEFAULT.outdir/contig_abundance/", mode: 'symlink'
+    
+    input:
+        path(cov_files)
+
+    output:
+        path("contig_abundance.tsv"), emit: contig_abundance_matrix
+
+    script:
+        cov_files_comma = cov_files.toString().replaceAll(/ /, ",")
+        """
+        module load ${params.modules.perl} ${params.modules.tools} && \\
+        mergeAbundance.pl \\
+            --type contigs \\
+            --infiles ${cov_files_comma} \\
+            > contig_abundance.tsv
+        """
+}
+
+process MERGE_COV_GENES {
+    debug true
+    publishDir "$params.DEFAULT.outdir/gene_abundance/", mode: 'symlink'
+    
+    input:
+        path(cov_files)
+
+    output:
+        path("gene_abundance.tsv"), emit: gene_abundance_matrix
+
+    script:
+        cov_files_comma = cov_files.toString().replaceAll(/ /, ",")
+        """
+        module load ${params.modules.perl} ${params.modules.tools} && \\
+        mergeAbundance.pl \\
+            --type genes \\
+            --infiles ${cov_files_comma} \\
+            > gene_abundance.tsv
+        """
+}
+
+process DIAMOND_BLASTP_NR {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/diamond_blastp_nr/", mode: 'symlink'
+    cpus params.diamond_blastp.cluster_cpus
+    memory params.diamond_blastp.cluster_memory
+    time params.diamond_blastp.cluster_time
+
+    input:
+        /* 
+            Here 'each' (instead of 'path') will launch each process in parallel. For instance, if your have
+            a channel of 5 path in the infile channel (here the infile channel is :
+            EXONERATE_GENES.out.outfiles, 5 diamond-blastp processes will be launch in
+            parallel. Finally, I had to use tuple and not each.
+        */
+        tuple val(prefix), path(infile)
+
+    output:
+        //path("/*"), emit: diamond_blastp_outfiles
+        path("${prefix}.tsv"), emit: diamond_blastp_outfiles // single file channel as the next step
+                                                             // which consists of merging all files
+                                                             // generated here can easily be done on 
+                                                             // a low resource single node.
+
+    script:
+        """
+        module load ${params.modules.diamond} && \\
+
+        if [[ -s ${infile} ]] ; then
+            diamond blastp --quiet \\
+                -d ${params.diamond_blastp.db_nr} \\
+                -q ${infile} \\
+                -o ${prefix}.tsv \\
+                -k 10 \\
+                -e ${params.diamond_blastp.evalue} \\
+                -p ${params.diamond_blastp.num_threads}
+        else
+            touch ${prefix}.tsv
+        fi ;
+        """
+}
+
+process HMMSEARCH_KEGG {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/hmmsearch_kegg/", mode: 'symlink'
+    cpus params.hmmsearch.cluster_cpus
+    memory params.hmmsearch.cluster_memory
+    time params.hmmsearch.cluster_time
+
+    input:
+        tuple val(prefix), path(infile)
+
+    output:
+        path("${prefix}_hmmsearch_kegg_domtblout.tsv"), emit: domtblout_outfiles
+        path("${prefix}_hmmsearch_kegg_tblout.tsv"), emit: tblout_outfiles
+
+    script:
+        """
+        module load ${params.modules.hmmer} && \\
+        if [[ -s ${infile} ]] ; then
+            hmmsearch \\
+                --tblout ${prefix}_hmmsearch_kegg_tblout.tsv \\
+                --domtblout ${prefix}_hmmsearch_kegg_domtblout.tsv \\
+                -E ${params.hmmsearch.evalue} \\
+                --cpu ${params.hmmsearch.num_threads} \\
+                ${params.kegg.KO_profiles} \\
+                ${infile} > /dev/null
+        else
+            touch ${prefix}_hmmsearch_kegg_tblout.tsv
+            touch ${prefix}_hmmsearch_kegg_domtblout.tsv
+        fi ;
+        """
+}
+
+process HMMSEARCH_PFAM {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/hmmsearch_pfam/", mode: 'symlink'
+    cpus params.hmmsearch.cluster_cpus
+    memory params.hmmsearch.cluster_memory
+    time params.hmmsearch.cluster_time
+
+    input:
+        tuple val(prefix), path(infile)
+
+    output:
+        path("${prefix}_hmmsearch_pfam_domtblout.tsv"), emit: domtblout_outfiles
+        path("${prefix}_hmmsearch_pfam_tblout.tsv"), emit: tblout_outfiles
+
+    script:
+        """
+        module load ${params.modules.hmmer} && \\
+        if [[ -s ${infile} ]] ; then
+            hmmsearch \\
+                --tblout ${prefix}_hmmsearch_pfam_tblout.tsv \\
+                --domtblout ${prefix}_hmmsearch_pfam_domtblout.tsv \\
+                -E ${params.hmmsearch.evalue} \\
+                --cpu ${params.hmmsearch.num_threads} \\
+                ${params.pfam.db} \\
+                ${infile} > /dev/null
+        else
+            touch ${prefix}_hmmsearch_pfam_tblout.tsv
+            touch ${prefix}_hmmsearch_pfam_domtblout.tsv
+        fi ;
+        """
+}
+
+process RPSBLAST_COG {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/rpsblast_cog/", mode: 'symlink'
+    cpus params.rpsblast.cluster_cpus
+    memory params.rpsblast.cluster_memory
+    time params.rpsblast.cluster_time
+
+    input:
+        /*
+            In the end, a tuple and not two each channels had to be used in here.
+        */
+        tuple val(prefix), path(infile)
+        //each prefix
+        //each infile
+
+    output:
+        path("${prefix}_rpsblast_cog.tsv"), emit: outfiles
+
+    script:
+        """
+        module load ${params.modules.blast} && \\
+        if [[ -s ${infile} ]] ; then
+            rpsblast \\
+                -db ${params.cog.db} \\
+                -query ${infile} \\
+                -out ${prefix}_rpsblast_cog.tsv \\
+                -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle' \\
+                -max_target_seqs 1 \\
+                -evalue 1e-10 \\
+                -num_threads 2
+        else
+            touch ${prefix}_rpsblast_cog.tsv
+        fi ;
+        """
+}
+
+process COG_OVERREP {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(rpsblast_cog)
+        path(gene_abundance)
+
+    output:
+        path("COG_abundance.tsv"), emit: COG_abundance
+
+    script:
+        """
+        module load ${params.modules.tools} ${params.modules.python} && \\
+        getCOG.py \\
+            --infile-blastp ${rpsblast_cog} \\
+            --infile-gene-abundance ${gene_abundance} \\
+            > COG_abundance.tsv
+        """
+}
+
+process RPSBLAST_KOG {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/rpsblast_kog/", mode: 'symlink'
+    cpus params.rpsblast.cluster_cpus
+    memory params.rpsblast.cluster_memory
+    time params.rpsblast.cluster_time
+
+    input:
+        each prefix
+        each infile
+
+    output:
+        path("${prefix}_rpsblast_kog.tsv"), emit: outfile
+
+    script:
+        """
+        module load ${params.modules.blast} && \\
+        if [[ -s ${infile} ]] ; then
+            rpsblast \\
+                -db ${params.kog.db} \\
+                -query ${infile} \\
+                -out ${prefix}_rpsblast_kog.tsv \\
+                -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle' \\
+                -max_target_seqs 1 \\
+                -evalue 1e-10 \\
+                -num_threads 2
+        else
+            touch ${prefix}_rpsblast_kog.tsv
+        fi ;
+        """
+}
+
+process MERGE_DIAMOND_BLASTP_NR {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(infiles)
+
+    output:
+        path("diamond_blastp_nr.tsv"), emit: tsv
+
+    script:
+        """
+        cat ${infiles} > diamond_blastp_nr.tsv
+        """
+}
+
+process MERGE_COG {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(infiles)
+
+    output:
+        path("rpsblast_cog.tsv"), emit: tsv
+
+    script:
+        """
+        cat ${infiles} > rpsblast_cog.tsv
+        """
+}
+
+process MERGE_KEGG {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(infile_tblout)
+        path(infile_domtblout)
+
+    output:
+        path("hmmsearch_kofam_tblout.tsv"), emit: tblout
+        path("hmmsearch_kofam_domtblout.tsv"), emit: domtblout
+
+    script:
+        """
+        cat ${infile_tblout} > hmmsearch_kofam_tblout.tsv.tmp && \\
+        cat ${infile_domtblout} > hmmsearch_kofam_domtblout.tsv.tmp && \\
+        awk 'BEGIN{OFS=FS=\" \"} NR<=3{print}; NR>3{tmp=\$1; \$1=\$3; \$3=tmp; tmp=\$2; \$2=\$4; \$4=tmp; print}' hmmsearch_kofam_tblout.tsv.tmp > hmmsearch_kofam_tblout.tsv && \\
+        awk 'BEGIN{OFS=FS=\" \"} NR<=3{print}; NR>3{tmp=\$1; \$1=\$4; \$4=tmp; tmp=\$2; \$2=\$5; \$5=tmp; print}' hmmsearch_kofam_domtblout.tsv.tmp > hmmsearch_kofam_domtblout.tsv
+        """
+}
+
+process MERGE_PFAM {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(infile_tblout)
+        path(infile_domtblout)
+
+    output:
+        path("hmmsearch_pfam_tblout.tsv"), emit: tblout
+        path("hmmsearch_pfam_domtblout.tsv"), emit: domtblout
+
+    script:
+        """
+        cat ${infile_tblout} > hmmsearch_pfam_tblout.tsv.tmp && \\
+        cat ${infile_domtblout} > hmmsearch_pfam_domtblout.tsv.tmp && \\
+        awk 'BEGIN{OFS=FS=\" \"} NR<=3{print}; NR>3{tmp=\$1; \$1=\$3; \$3=tmp; tmp=\$2; \$2=\$4; \$4=tmp; print}' hmmsearch_pfam_tblout.tsv.tmp > hmmsearch_pfam_tblout.tsv && \\
+        awk 'BEGIN{OFS=FS=\" \"} NR<=3{print}; NR>3{tmp=\$1; \$1=\$4; \$4=tmp; tmp=\$2; \$2=\$5; \$5=tmp; print}' hmmsearch_pfam_domtblout.tsv.tmp > hmmsearch_pfam_domtblout.tsv
+        """
+}
+
+
+process PARSE_KEGG {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(infile_tblout)
+
+    output:
+        path("KOs_parsed.tsv"), emit: KOs_parsed
+
+    script:
+        """
+        module load ${params.modules.tools}
+        parseKofam.pl \\
+            --hmmsearch \\
+            --infile ${infile_tblout} \\
+            --ref_database ${params.parse_kofam.ref_database} \\
+            > KOs_parsed.tsv
+        """
+}
+
+process KO_OVERREP {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(KOs_parsed)
+        path(gene_abundance)
+
+    output:
+        path("KO_abundance.tsv"), emit: KO_abundance
+
+    script:
+        """
+        module load ${params.modules.tools} ${params.modules.python} && \\
+        getKeggKO.py \
+            --infile-blastp ${KOs_parsed} \
+            --infile-gene-abundance ${gene_abundance} \
+            > KO_abundance.tsv
+        """
+}
+
+/* 
+    I've tried, but I couldn't make array jobs work with current version of Nextflow. To 
+    revisit in the future...
+*/
+process DIAMOND_BLASTP_NR_ARRAY_JOB {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/diamond_blastp_nr/", mode: 'symlink'
+    clusterOptions = params.clusterOptions + " --array=0-1"
+    cpus params.diamond_blastp.cluster_cpus
+    memory params.diamond_blastp.cluster_memory
+    time params.diamond_blastp.cluster_time
+    afterScript 'touch alldone.done'
+
+    input:
+        path(indir)
+        //path(number_of_chunks_file)
+
+    output:
+        //path("diamond_blastp_nr_out_\$SLURM_ARRAY_TASK_ID2.tsv"), emit: tsv
+        env(SLURM_ARRAY_TASK_ID), emit: sati
+        path("alldone.done"), emit: done
+
+    script:
+        
+        """
+        module load ${params.modules.diamond} && \\
+        SLURM_ARRAY_TASK_ID2=\$(( SLURM_ARRAY_TASK_ID - 0  ))
+
+        SLURM_ARRAY_TASK_ID2=\$(printf "%07d" \$SLURM_ARRAY_TASK_ID2)
+        echo 'SLURM/SGE_TASK_ID2' \$SLURM_ARRAY_TASK_ID2
+
+        if [[ -s ${indir}/contigs_renamed.faa_chunk_\$SLURM_ARRAY_TASK_ID2 ]] ; then
+            diamond blastp --quiet \\
+                -d ${params.diamond_blastp.db_nr} \\
+                -q ${indir}/contigs_renamed.faa_chunk_\$SLURM_ARRAY_TASK_ID2 \\
+                -o diamond_blastp_nr_out_\$SLURM_ARRAY_TASK_ID2.tsv \\
+                -k 10 \\
+                -e ${params.diamond_blastp.evalue} \\
+                -p ${params.diamond_blastp.num_threads}
+        else
+            touch diamond_blastp_nr_out.tsv
+        fi ;
+        """
+
+}
+
+process CONVERT_IDS_FOR_CAT {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/taxonomy/", mode: 'symlink'
+    cpus params.CAT.cluster_cpus
+    memory params.CAT.cluster_memory
+    time params.CAT.cluster_time
+
+    input:
+        path(infile_gff)
+        path(infile_diamond)
+
+    output:
+        path("blastp_nr_alt_orf_ids.tsv"), emit: orf_ids
+
+    script:
+        """
+        module load ${params.modules.tools} && \\
+        convertDiamondBlastpORFIDForCAT.pl \\
+            --infile_gff ${infile_gff} \\
+            --infile_blastp ${infile_diamond} \\
+            > blastp_nr_alt_orf_ids.tsv
+        """
+}
+
+process CAT {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/taxonomy/", mode: 'symlink'
+    cpus params.CAT.cluster_cpus
+    memory params.CAT.cluster_memory
+    time params.CAT.cluster_time
+
+    input:
+        path(contigs_fna)
+        path(genes_faa)
+        path(orf_ids)
+
+    output:
+        path("out.contig2classification_with_names.tsv"), emit: classification_with_names
+
+    script:
+        """
+        module load ${params.modules.CAT} && \\
+        CAT contigs \\
+            -r ${params.CAT.r} -f ${params.CAT.f} \\
+            -c ${contigs_fna} \\
+            -p ${genes_faa} \\
+            -a ${orf_ids} \\
+            -d ${params.CAT.database_folder} \\
+            -t ${params.CAT.taxonomy_folder} \\
+            -o out --force && \\
+        CAT add_names \\
+            -i out.contig2classification.txt \\
+            -o out.contig2classification_with_names.tsv \\
+            -t ${params.CAT.taxonomy_folder} --force
+        """
+}
+
+process GENERATE_FEATURE_TABLES {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/taxonomy/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(classification_with_names)
+        path(contig_abundance)
+
+    output:
+        path("taxonomy.tsv"), emit: taxonomy
+        path("feature_table.tsv"), emit: feature_table
+        path("feature_table_bacteriaArchaea.tsv"), emit: feature_table_ba
+        path("feature_table_others.tsv"), emit: feature_table_others
+
+    script:
+        """
+        module load ${params.modules.tools} ${params.modules.perl} && \\
+        generateFeatureTableFromCAT.pl \\
+            --infile_taxonomy ${classification_with_names} \\
+            --infile_abundance ${contig_abundance} \\
+            --outfile_taxonomy taxonomy.tsv \\
+            > feature_table.tsv && \\
+        splitFeatureTable.pl \\
+            --infile feature_table.tsv \\
+            --matched feature_table_bacteriaArchaea.tsv \\
+            --unmatched feature_table_others.tsv \\
+            --keepChloro yes \\
+            --keepMito yes \\
+            --select bacteriaArchaea
+        """
+}
+
+process SUMMARIZE_TAXONOMY {
+    debug true
+    publishDir "$params.DEFAULT.outdir/annotations/taxonomy/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(feature_table)
+
+    output:
+        path("feature_table_L{1,2,3,4,5,6,7}_relative.tsv"), emit: relative
+        path("feature_table_L{1,2,3,4,5,6,7}_absolute.tsv"), emit: absolute
+
+    script:
+        """
+        module load ${params.modules.tools} ${params.modules.python} && \\
+        for i in {1..7}
+        do
+            microbiomeutils.py taxsum \\
+                -i ${feature_table} \\
+                -l \$i \\
+                -t relative \\
+                > feature_table_L\${i}_relative.tsv && \\
+            microbiomeutils.py taxsum \\
+                -i ${feature_table} \\
+                -l \$i \\
+                -t absolute \\
+                > feature_table_L\${i}_absolute.tsv
+        done
+        """
+}
+
+process BETA_DIVERSITY_BACTARCH{
+    debug true
+    publishDir "$params.DEFAULT.outdir/beta_diversity/bacteria_archaea/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(feature_table)
+
+    output:
+        path("bray_curtis_contig_bacteriaArchaea.tsv"), emit: distance_matrix
+        path("bray_curtis_contig_bacteriaArchaea_coords.tsv"), emit: coords
+        path("3d_bray_curtis_plot"), emit: interactive_plot
+
+    script:
+        """
+        module load ${params.modules.tools} ${params.modules.python} && \\
+        microbiomeutils.py betadiv \\
+            -i ${feature_table} \\
+            -m bray-curtis \\
+            > bray_curtis_contig_bacteriaArchaea.tsv && \\
+            sed -i 's/nan/0.0/g' bray_curtis_contig_bacteriaArchaea.tsv && \\
+        microbiomeutils.py pcoa \\
+            -i bray_curtis_contig_bacteriaArchaea.tsv \\
+            > bray_curtis_contig_bacteriaArchaea_coords.tsv && \\
+        microbiomeutils.py emperor \\
+            -i bray_curtis_contig_bacteriaArchaea_coords.tsv \\
+            -m ${params.DEFAULT.mapping_file} \\
+            -o 3d_bray_curtis_plot
+        """
+}
+
+process BETA_DIVERSITY_ALL{
+    debug true
+    publishDir "$params.DEFAULT.outdir/beta_diversity/all/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(feature_table)
+
+    output:
+        path("bray_curtis_contig.tsv"), emit: distance_matrix
+        path("bray_curtis_contig_coords.tsv"), emit: coords
+        path("3d_bray_curtis_plot"), emit: interactive_plot
+
+    script:
+        """
+        module load ${params.modules.tools} ${params.modules.python} && \\
+        microbiomeutils.py betadiv \\
+            -i ${feature_table} \\
+            -m bray-curtis \\
+            > bray_curtis_contig.tsv && \\
+            sed -i 's/nan/0.0/g' bray_curtis_contig.tsv && \\
+        microbiomeutils.py pcoa \\
+            -i bray_curtis_contig.tsv \\
+            > bray_curtis_contig_coords.tsv && \\
+        microbiomeutils.py emperor \\
+            -i bray_curtis_contig_coords.tsv \\
+            -m ${params.DEFAULT.mapping_file} \\
+            -o 3d_bray_curtis_plot
+        """
+}
+
+process ALPHA_DIVERSITY_CONTIGS{
+    debug true
+    publishDir "$params.DEFAULT.outdir/alpha_diversity/contig_abundance/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(contig_abundance)
+
+    output:
+        path("*.tsv"), emit: diversity_index_files
+
+    script:
+        """
+        module load ${params.modules.tools} ${params.modules.rtk} && \\
+        generateDepthPointsForRarefaction.pl \\
+            --remove_last_col false \\
+            --infile ${contig_abundance} \\
+            --number_of_points ${params.alphadiv.number_of_points} \\
+            > depth_list.txt && \\
+        sed '1 s/^\\S\\+\\t/\\t/' ${contig_abundance} > tmp.tsv && \\
+        rtk swap \\
+            -i tmp.tsv \\
+            -o ./ \\
+            -r ${params.alphadiv.perm} \\
+            -d `cat depth_list.txt` && \\
+        rm tmp.tsv && \\
+        touch rtk.done
+        """
+}
+
+process ALPHA_DIVERSITY_GENES{
+    debug true
+    publishDir "$params.DEFAULT.outdir/alpha_diversity/gene_abundance/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(gene_abundance)
+
+    output:
+        path("*.tsv"), emit: diversity_index_files
+
+    script:
+        """
+        module load ${params.modules.tools} ${params.modules.rtk} && \\
+        generateDepthPointsForRarefaction.pl \\
+            --remove_last_col false \\
+            --infile ${gene_abundance} \\
+            --number_of_points ${params.alphadiv.number_of_points} \\
+            > depth_list.txt && \\
+        sed '1 s/^\\S\\+\\t/\\t/' ${gene_abundance} > tmp.tsv && \\
+        rtk swap \\
+            -i tmp.tsv \\
+            -o ./ \\
+            -r ${params.alphadiv.perm} \\
+            -d `cat depth_list.txt` && \\
+        rm tmp.tsv && \\
+        touch rtk.done
+        """
+}
+
+process COG_MATRIX_RPOB{
+    debug true
+    publishDir "$params.DEFAULT.outdir/alpha_diversity/rpob/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(gene_abundance)
+        path(rpsblast_cog)
+
+    output:
+        path("rpob_abundance.tsv"), emit: rpob_abundance
+
+    script:
+        """
+        module load ${params.modules.tools} && \\
+        generateCOGMatrix.pl \\
+            --infile ${gene_abundance} \\
+            --cog_term COG0085 \\
+            --cog_file ${rpsblast_cog} \\
+            > rpob_abundance.tsv
+        """
+}
+
+process COG_MATRIX_RECA{
+    debug true
+    publishDir "$params.DEFAULT.outdir/alpha_diversity/reca/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(gene_abundance)
+        path(rpsblast_cog)
+
+    output:
+        path("reca_abundance.tsv"), emit: reca_abundance
+
+    script:
+        """
+        module load ${params.modules.tools} && \\
+        generateCOGMatrix.pl \\
+            --infile ${gene_abundance} \\
+            --cog_term COG0468 \\
+            --cog_file ${rpsblast_cog} \\
+            > reca_abundance.tsv
+        """
+}
+
+process ALPHA_DIVERSITY_RPOB{
+    debug true
+    publishDir "$params.DEFAULT.outdir/alpha_diversity/rpob/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(gene_abundance)
+
+    output:
+        path("*.tsv"), emit: diversity_index_files
+
+    script:
+        """
+        module load ${params.modules.tools} ${params.modules.rtk} && \\
+        generateDepthPointsForRarefaction.pl \\
+            --remove_last_col false \\
+            --infile ${gene_abundance} \\
+            --number_of_points ${params.alphadiv.number_of_points} \\
+            > depth_list.txt && \\
+        sed '1 s/^\\S\\+\\t/\\t/' ${gene_abundance} > tmp.tsv && \\
+        rtk swap \\
+            -i tmp.tsv \\
+            -o ./ \\
+            -r ${params.alphadiv.perm} \\
+            -d `cat depth_list.txt` && \\
+        rm tmp.tsv && \\
+        touch rtk.done
+        """
+}
+
+process ALPHA_DIVERSITY_RECA{
+    debug true
+    publishDir "$params.DEFAULT.outdir/alpha_diversity/reca/", mode: 'symlink'
+    //cpus params.rpsblast.cluster_cpus
+    //memory params.rpsblast.cluster_memory
+    //time params.rpsblast.cluster_time
+
+    input:
+        path(gene_abundance)
+
+    output:
+        path("*.tsv"), emit: diversity_index_files
+
+    script:
+        """
+        module load ${params.modules.tools} ${params.modules.rtk} && \\
+        generateDepthPointsForRarefaction.pl \\
+            --remove_last_col false \\
+            --infile ${gene_abundance} \\
+            --number_of_points ${params.alphadiv.number_of_points} \\
+            > depth_list.txt && \\
+        sed '1 s/^\\S\\+\\t/\\t/' ${gene_abundance} > tmp.tsv && \\
+        rtk swap \\
+            -i tmp.tsv \\
+            -o ./ \\
+            -r ${params.alphadiv.perm} \\
+            -d `cat depth_list.txt` && \\
+        rm tmp.tsv && \\
+        touch rtk.done
+        """
+}
