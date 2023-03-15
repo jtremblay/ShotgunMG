@@ -8,7 +8,7 @@ A replicated simple mock community dataset is available here https://doi.org/10.
 
 This project is in development - more coming soon.
 
-<code>
+```
 ###############################################################################
               _____ _           _                    __  __  _____ 
              / ____| |         | |                  |  \/  |/ ____|  
@@ -23,7 +23,15 @@ This project is in development - more coming soon.
              Home page: jtremblay.github.io/pipelines.html
                Version: 1.4.0-beta                                         
 ###############################################################################
-</code>
+```
+
+<figure>
+  <img
+  src="./images/overview_shotgunmg.png"
+  alt="Pipeline diagram.">
+  <figcaption>Figure 1. Overview of ShotgunMG. 1) Reads of each library are controlled for quality. 2) Quality controlled reads are co-assembled into one single de novo assembly. Gene coordinates are computed on each contig. Quality controlled reads are mapped on the co-assembly to estimate contig and gene abundance. 3) Contig and gene abundance are summarized into abundance matrices where columns = samples/liraries and rows = contig or gene identifiers. 4) Genes are annotated for taxonomy and functions and compiled on one single database (5). 6) These end results can then be used for downstream analyses. </figcaption>
+</figure>
+
 
 ![Figure 1](./images/overview_shotgunmg.png)
 *Figure 1. Overview of ShotgunMG.
