@@ -25,18 +25,12 @@ This project is in development - more coming soon.
 ###############################################################################
 ```
 
-{% figure caption:"Le logo de **Jekyll** et son clin d'oeil à Robert Louis Stevenson" %}
-    ![Le logo de Jekyll](./images/overview_shotgunmg.png)
-{% endfigure %}
-
 <figure>
   <img src="./images/overview_shotgunmg.png" alt="Pipeline diagram.">
   <figcaption>
-    Figure 1. Overview of ShotgunMG. 1) Reads of each library are controlled for quality. 2) Quality controlled reads are co-assembled into one single de novo assembly. Gene coordinates are computed on each contig. Quality controlled reads are mapped on the co-assembly to estimate contig and gene abundance. 3) Contig and gene abundance are summarized into abundance matrices where columns = samples/liraries and rows = contig or gene identifiers. 4) Genes are annotated for taxonomy and functions and compiled on one single database (5). 6) These end results can then be used for downstream analyses. 
+    Figure 1. <br> Overview of ShotgunMG. 1) Reads of each library are controlled for quality. 2) Quality controlled reads are co-assembled into one single de novo assembly. Gene coordinates are computed on each contig. Quality controlled reads are mapped on the co-assembly to estimate contig and gene abundance. 3) Contig and gene abundance are summarized into abundance matrices where columns = samples/liraries and rows = contig or gene identifiers. 4) Genes are annotated for taxonomy and functions and compiled on one single database (5). 6) These end results can then be used for downstream analyses. 
   </figcaption>
 </figure>
-
-
 
 ## Usage
 Once Nextflow (and an appropriate version of Java) is installed, you can run the pipeline like this:
