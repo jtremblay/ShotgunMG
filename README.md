@@ -14,7 +14,7 @@
                Home page: jtremblay.github.io/shotgunmg.html
 ```
 
-This repository contains an implementation of the ShotgunMG pipeline (https://doi.org/10.1093/bib/bbac443) for Nextflow. The original pipeline implemented with the GenPipes workflow management system is available here: https://bitbucket.org/jtremblay514/nrc_pipeline_public.
+This repository contains an implementation of the ShotgunMG pipeline (https://doi.org/10.1093/bib/bbac443) for Nextflow. The original pipeline implemented with the GenPipes workflow management system is available here: https://bitbucket.org/jtremblay514/nrc_pipeline_public and an exhaustive user guide here: https://jtremblay.github.io/shotgunmg_guide_v1.3.2.html.
 
 All the modules defined in the `shotgunmg.config` file should be installed and functional. The nrc_tools utilities can be found here: https://bitbucket.org/jtremblay514/nrc_tools_public . Briefly, this pipeline takes a set of raw reads (i.e. short Illumina reads), performs quality control and co-assemble the QC-controlled reads. These reads are then mapped against the co-assembly to generate contig and gene abundance matrices. The co-assembly is also processed through a gene caller (i.e. Prodigal). Resulting genes are functionally annotated using hmmsearch vs pfam; hmmsearch vs kofam and rpsblast vs COG. Taxonomic annotations are assigned using the CAT package. Finally, MAGs are generated using MetaBAT2. Ultimately, this pipeline processes raw fastqs into gene and contig abundance matrices (how many reads per sample par gene or contig) and functional and taxonomic annotation files.
 
@@ -31,7 +31,7 @@ This project is in development - more coming soon. In particular, support for me
 </figure>
 
 ## Usage
-Once Nextflow (and an appropriate version of Java) is installed, you can clone this repository and configure the `shotgunmg.config` file according to your needs (especially the DEFAULT section where you can specify the raw reads directory). The pipeline can then by run like this:
+Once Nextflow (and an appropriate version of Java) is installed, you can clone this repository and configure the `shotgunmg.config` file according to your needs (especially the DEFAULT section where you can specify the raw reads directory). Note that a simple mapping_file is needed (see example: `files/mapping_file.tsv`). The pipeline can then by run like this:
 ```
 nextflow run -c ./shotgunmg.config ./shotgunmg.nf -resume
 ```
