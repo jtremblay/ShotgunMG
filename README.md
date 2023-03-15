@@ -1,15 +1,6 @@
 # ShotgunMG
 
-This repository contains an implementation of the ShotgunMG pipeline (https://doi.org/10.1093/bib/bbac443) for Nextflow. The original pipeline implemented with the GenPipes workflow management system is available here: https://bitbucket.org/jtremblay514/nrc_pipeline_public.
-
-All the modules defined in the `shotgunmg.config` file should be installed and functional. The nrc_tools utilities can be found here: https://bitbucket.org/jtremblay514/nrc_tools_public . Briefly, this pipeline takes a set of raw reads (i.e. short Illumina reads), performs quality control and co-assemble the QC-controlled reads. These reads are then mapped against the co-assembly to generate contig and gene abundance matrices. The co-assembly is also processed through a gene caller (i.e. Prodigal). Resulting genes are functionally annotated using hmmsearch vs pfam; hmmsearch vs kofam and rpsblast vs COG. Taxonomic annotations are assigned using the CAT package. Finally, MAGs are generated using MetaBAT2. End results are included in the `output/` directory. Ultimately, this pipeline processes raw fastqs into gene and contig abundance matrices and functional and taxonomic annotation files.
-
-A replicated simple mock community dataset is available here https://doi.org/10.5281/zenodo.7140751 and is a good dataset to test this pipeline. A fully functional implementation of the pipeline is available as a Docker image: https://cloud.docker.com/u/julio514/repository/docker/julio514/centos
-
-This project is in development - more coming soon. In particular, support for metaSPADes (for co-assembly step) and BBMAP (for mapping reads against co-assembly) will soon be implemented.
-
 ```
-###############################################################################
               _____ _           _                    __  __  _____ 
              / ____| |         | |                  |  \/  |/ ____|  
             | (___ | |__   ___ | |_ __ _ _   _ _ __ | \  / | |  __ 
@@ -20,10 +11,17 @@ This project is in development - more coming soon. In particular, support for me
                                    |___/    for N E X T F L O W 
 
                 Github: https://github.com/jtremblay/ShotgunMG
-             Home page: jtremblay.github.io/pipelines.html
-               Version: 1.4.0-beta                                         
-###############################################################################
+             Home page: jtremblay.github.io/shotgunmg.html
 ```
+
+This repository contains an implementation of the ShotgunMG pipeline (https://doi.org/10.1093/bib/bbac443) for Nextflow. The original pipeline implemented with the GenPipes workflow management system is available here: https://bitbucket.org/jtremblay514/nrc_pipeline_public.
+
+All the modules defined in the `shotgunmg.config` file should be installed and functional. The nrc_tools utilities can be found here: https://bitbucket.org/jtremblay514/nrc_tools_public . Briefly, this pipeline takes a set of raw reads (i.e. short Illumina reads), performs quality control and co-assemble the QC-controlled reads. These reads are then mapped against the co-assembly to generate contig and gene abundance matrices. The co-assembly is also processed through a gene caller (i.e. Prodigal). Resulting genes are functionally annotated using hmmsearch vs pfam; hmmsearch vs kofam and rpsblast vs COG. Taxonomic annotations are assigned using the CAT package. Finally, MAGs are generated using MetaBAT2. End results are included in the `output/` directory. Ultimately, this pipeline processes raw fastqs into gene and contig abundance matrices and functional and taxonomic annotation files.
+
+A replicated simple mock community dataset is available here https://doi.org/10.5281/zenodo.7140751 and is a good dataset to test this pipeline. A fully functional implementation of the pipeline is available as a Docker image: https://cloud.docker.com/u/julio514/repository/docker/julio514/centos
+
+This project is in development - more coming soon. In particular, support for metaSPADes (for co-assembly step) and BBMAP (for mapping reads against co-assembly) will soon be implemented.
+
 
 <figure>
   <img src="./images/overview_shotgunmg.png" alt="Pipeline diagram.">
