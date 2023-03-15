@@ -35,7 +35,7 @@ This project is in development - more coming soon.
 ## Usage
 Once Nextflow (and an appropriate version of Java) is installed, you can run the pipeline like this:
 ```
-nextflow run -c ./shotgunmg.config ./test5.nf -resume
+nextflow run -c ./shotgunmg.config ./shotgunmg.nf -resume
 ```
 
 In the ```shotgun.config``` file are all the parameters used for every steps of the pipeline. There you can customize the amounts of resources of each step, depending on this size and complexity of the dataset to analyze. The pipeline relies on environment modules (https://modules.readthedocs.io/en/latest/) which means that each software required by the pipeline have to be available through a module. For instance, for the co-assembly step, the MEGAHIT should be made available by first loading the module : (i.e. ```module load nrc/megahit/1.2.9```) and then running the software (i.e. ```megahit -h```).
