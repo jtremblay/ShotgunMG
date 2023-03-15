@@ -5,9 +5,9 @@
 process BETA_DIVERSITY_BACTARCH{
     debug true
     publishDir "$params.DEFAULT.outdir/beta_diversity/bacteria_archaea/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.beta_diversity.cluster_cpus
+    memory params.beta_diversity.cluster_memory
+    time params.beta_diversity.cluster_time
 
     input:
         path(feature_table)
@@ -38,9 +38,9 @@ process BETA_DIVERSITY_BACTARCH{
 process BETA_DIVERSITY_ALL{
     debug true
     publishDir "$params.DEFAULT.outdir/beta_diversity/all/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.beta_diversity.cluster_cpus
+    memory params.beta_diversity.cluster_memory
+    time params.beta_diversity.cluster_time
 
     input:
         path(feature_table)
@@ -71,9 +71,9 @@ process BETA_DIVERSITY_ALL{
 process ALPHA_DIVERSITY_CONTIGS{
     debug true
     publishDir "$params.DEFAULT.outdir/alpha_diversity/contig_abundance/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.alpha_diversity.cluster_cpus
+    memory params.alpha_diversity.cluster_memory
+    time params.alpha_diversity.cluster_time
 
     input:
         path(contig_abundance)
@@ -103,9 +103,9 @@ process ALPHA_DIVERSITY_CONTIGS{
 process ALPHA_DIVERSITY_GENES{
     debug true
     publishDir "$params.DEFAULT.outdir/alpha_diversity/gene_abundance/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.alpha_diversity.cluster_cpus
+    memory params.alpha_diversity.cluster_memory
+    time params.alpha_diversity.cluster_time
 
     input:
         path(gene_abundance)
@@ -135,9 +135,9 @@ process ALPHA_DIVERSITY_GENES{
 process SUMMARIZE_TAXONOMY {
     debug true
     publishDir "$params.DEFAULT.outdir/annotations/taxonomy/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.summarize_taxonomy.cluster_cpus
+    memory params.summarize_taxonomy.cluster_memory
+    time params.summarize_taxonomy.cluster_time
 
     input:
         path(feature_table)
@@ -168,9 +168,9 @@ process SUMMARIZE_TAXONOMY {
 process ALPHA_DIVERSITY_RPOB{
     debug true
     publishDir "$params.DEFAULT.outdir/alpha_diversity/rpob/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.alpha_diversity.cluster_cpus
+    memory params.alpha_diversity.cluster_memory
+    time params.alpha_diversity.cluster_time
 
     input:
         path(gene_abundance)
@@ -200,9 +200,9 @@ process ALPHA_DIVERSITY_RPOB{
 process ALPHA_DIVERSITY_RECA{
     debug true
     publishDir "$params.DEFAULT.outdir/alpha_diversity/reca/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.alpha_diversity.cluster_cpus
+    memory params.alpha_diversity.cluster_memory
+    time params.alpha_diversity.cluster_time
 
     input:
         path(gene_abundance)

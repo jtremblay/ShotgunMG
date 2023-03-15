@@ -49,7 +49,6 @@ process BBDUK {
     memory params.fake_bbduk.cluster_memory
     time params.fake_bbduk.cluster_time
 
-    //carefull with tuple. If only one variable, dont include the damn keywork tuple!!!
     input:
         tuple val(sample_id), path(infile_R1), path(infile_R2)
 
@@ -84,7 +83,6 @@ process BBMAP_SUBTRACT {
     memory params.bbmap_sub.cluster_memory
     time params.bbmap_sub.cluster_time
 
-    //carefull with tuple. If only one variable, dont include the damn keywork tuple!!!
     input:
         tuple val(sample_id), path(infile_R1), path(infile_R2)
 
@@ -156,7 +154,6 @@ process METASPADES {
     output:
         path("spades/scaffolds_gt${params.spades.length}.fasta"), emit: assembly
         path("spades/assembly_stats.txt"), emit: stats
-        //path("log.txt"), emit: log
 
     script:
         def input_R1 = " -1 " + reads1.join(" -1 ")
@@ -311,9 +308,9 @@ process BEDFILE_GENES {
 process MAKE_BWA_INDEX {
     debug true
     publishDir "$params.DEFAULT.outdir/assembly", mode: 'symlink'
-    ///cpus params.make_index.cluster_cpus
-    ///memory params.make_index.cluster_memory
-    ///time params.make_index.cluster_time
+    cpus params.make_index.cluster_cpus
+    memory params.make_index.cluster_memory
+    time params.make_index.cluster_time
     
     input:
         path(infile)
@@ -342,9 +339,9 @@ process MAKE_BWA_INDEX {
 process BWAMEM_PE {
     debug true
     publishDir "$params.DEFAULT.outdir/contig_abundance/bams", mode: 'symlink'
-    ///cpus params.bwa.cluster_cpus
-    ///memory params.bwa.cluster_memory
-    ///time params.bwa.cluster_time
+    cpus params.bwa.cluster_cpus
+    memory params.bwa.cluster_memory
+    time params.bwa.cluster_time
     
     input:
         path(amb)
@@ -378,6 +375,9 @@ process BWAMEM_PE {
 process BEDTOOLS_COV_CONTIGS {
     debug true
     publishDir "$params.DEFAULT.outdir/contig_abundance/cov", mode: 'symlink'
+    cpus params.bedtools.cluster_cpus
+    memory params.bedtools.cluster_memory
+    time params.bedtools.cluster_time
     
     input:
         tuple val(sample_id), path(bam)
@@ -401,6 +401,9 @@ process BEDTOOLS_COV_CONTIGS {
 process BEDTOOLS_COV_GENES {
     debug true
     publishDir "$params.DEFAULT.outdir/gene_abundance/cov", mode: 'symlink'
+    cpus params.bedtools.cluster_cpus
+    memory params.bedtools.cluster_memory
+    time params.bedtools.cluster_time
     
     input:
         tuple val(sample_id), path(bam)
@@ -429,6 +432,9 @@ process BEDTOOLS_COV_GENES {
 process MERGE_COV {
     debug true
     publishDir "$params.DEFAULT.outdir/${type}_abundance/", mode: 'symlink'
+    cpus params.merge_abundance.cluster_cpus
+    memory params.merge_abundance.cluster_memory
+    time params.merge_abundance.cluster_time
     
     input:
         path(cov_files)
@@ -451,6 +457,9 @@ process MERGE_COV {
 process MERGE_COV_CONTIGS {
     debug true
     publishDir "$params.DEFAULT.outdir/contig_abundance/", mode: 'symlink'
+    cpus params.merge_abundance.cluster_cpus
+    memory params.merge_abundance.cluster_memory
+    time params.merge_abundance.cluster_time
     
     input:
         path(cov_files)
@@ -472,6 +481,9 @@ process MERGE_COV_CONTIGS {
 process MERGE_COV_GENES {
     debug true
     publishDir "$params.DEFAULT.outdir/gene_abundance/", mode: 'symlink'
+    cpus params.merge_abundance.cluster_cpus
+    memory params.merge_abundance.cluster_memory
+    time params.merge_abundance.cluster_time
     
     input:
         path(cov_files)
@@ -507,11 +519,10 @@ process DIAMOND_BLASTP_NR {
         tuple val(prefix), path(infile)
 
     output:
-        //path("/*"), emit: diamond_blastp_outfiles
-        path("${prefix}.tsv"), emit: diamond_blastp_outfiles // single file channel as the next step
-                                                             // which consists of merging all files
-                                                             // generated here can easily be done on 
-                                                             // a low resource single node.
+        path("${prefix}.tsv"), emit: diamond_blastp_outfiles 
+                                                             
+                                                             
+                                                             
 
     script:
         """
@@ -607,8 +618,6 @@ process RPSBLAST_COG {
             In the end, a tuple and not two each channels had to be used in here.
         */
         tuple val(prefix), path(infile)
-        //each prefix
-        //each infile
 
     output:
         path("${prefix}_rpsblast_cog.tsv"), emit: outfiles
@@ -634,9 +643,9 @@ process RPSBLAST_COG {
 process COG_OVERREP {
     debug true
     publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.cog_overrep.cluster_cpus
+    memory params.cog_overrep.cluster_memory
+    time params.cog_overrep.cluster_time
 
     input:
         path(rpsblast_cog)
@@ -690,9 +699,9 @@ process RPSBLAST_KOG {
 process MERGE_DIAMOND_BLASTP_NR {
     debug true
     publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.merge.cluster_cpus
+    memory params.merge.cluster_memory
+    time params.merge.cluster_time
 
     input:
         path(infiles)
@@ -709,9 +718,9 @@ process MERGE_DIAMOND_BLASTP_NR {
 process MERGE_COG {
     debug true
     publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.merge.cluster_cpus
+    memory params.merge.cluster_memory
+    time params.merge.cluster_time
 
     input:
         path(infiles)
@@ -728,9 +737,9 @@ process MERGE_COG {
 process MERGE_KEGG {
     debug true
     publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.merge.cluster_cpus
+    memory params.merge.cluster_memory
+    time params.merge.cluster_time
 
     input:
         path(infile_tblout)
@@ -752,9 +761,9 @@ process MERGE_KEGG {
 process MERGE_PFAM {
     debug true
     publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.merge.cluster_cpus
+    memory params.merge.cluster_memory
+    time params.merge.cluster_time
 
     input:
         path(infile_tblout)
@@ -777,9 +786,9 @@ process MERGE_PFAM {
 process PARSE_KEGG {
     debug true
     publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.parse_kofam.cluster_cpus
+    memory params.parse_kofam.cluster_memory
+    time params.parse_kofam.cluster_time
 
     input:
         path(infile_tblout)
@@ -801,9 +810,9 @@ process PARSE_KEGG {
 process KO_OVERREP {
     debug true
     publishDir "$params.DEFAULT.outdir/annotations/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.kegg_overrep.cluster_cpus
+    memory params.kegg_overrep.cluster_memory
+    time params.kegg_overrep.cluster_time
 
     input:
         path(KOs_parsed)
@@ -928,9 +937,9 @@ process CAT {
 process GENERATE_FEATURE_TABLES {
     debug true
     publishDir "$params.DEFAULT.outdir/annotations/taxonomy/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.DEFAULT.cluster_cpus
+    memory params.DEFAULT.cluster_memory
+    time params.DEFAULT.cluster_time
 
     input:
         path(classification_with_names)
@@ -963,9 +972,9 @@ process GENERATE_FEATURE_TABLES {
 process COG_MATRIX_RPOB{
     debug true
     publishDir "$params.DEFAULT.outdir/alpha_diversity/rpob/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.DEFAULT.cluster_cpus
+    memory params.DEFAULT.cluster_memory
+    time params.DEFAULT.cluster_time
 
     input:
         path(gene_abundance)
@@ -988,9 +997,9 @@ process COG_MATRIX_RPOB{
 process COG_MATRIX_RECA{
     debug true
     publishDir "$params.DEFAULT.outdir/alpha_diversity/reca/", mode: 'symlink'
-    //cpus params.rpsblast.cluster_cpus
-    //memory params.rpsblast.cluster_memory
-    //time params.rpsblast.cluster_time
+    cpus params.DEFAULT.cluster_cpus
+    memory params.DEFAULT.cluster_memory
+    time params.DEFAULT.cluster_time
 
     input:
         path(gene_abundance)

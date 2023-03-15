@@ -1,9 +1,3 @@
-//params.raw_reads = "$projectDir/raw_reads/*_R{1,2}.fastq.gz"
-//params.outdir = "$projectDir/output/"
-
-//raw_reads = $params.DEFAULT.raw_reads_dir/$params.DEFAULT.raw_reads_pattern
-//outdir = ${params.DEFAULT.outdir}
-
 /*
     parameters are defined in the shotgunmg.config file
 */
@@ -128,11 +122,6 @@ workflow {
     ch_gene_chunks = EXONERATE_GENES.out.outfiles
         .map { it -> [it.name, it] }
         .transpose()
-    //ch_gene_chunks.view()
-    //prefixes = ch_tmp.collect{ it[0] }
-    //files = ch_tmp.collect{ it[1] }
-    //prefixes.view()
-    //files.view()
 
     /* NCBI NR. Will be used later in CAT (taxonomy assignation) */
     DIAMOND_BLASTP_NR(ch_gene_chunks)
@@ -201,6 +190,5 @@ workflow {
         METABAT_ABUNDANCE.out.abundance
     )
     CHECKM_METABAT2(METABAT2.out.fasta_dir)
-
 }
 
