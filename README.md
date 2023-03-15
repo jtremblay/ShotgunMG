@@ -81,6 +81,8 @@ KOfamscan generates lots of intermediate files which can actually make it imposs
 ## Setting up files needed by the pipeline
 The first step in running ShotgunMG is to setup the files required by the pipeline to run. Fastq libraries usually come in the form of demultiplexed paired end sequencing libraries - one library per sample. These ```.fastq.gz``` files should be stored in a directory labeled ```raw_reads/```.
 
+## Result files
+An example of result files obtained with by processing a reduced dataset of mock communities shotgun metagenomic sequencing libraries (PRJNA873699) are available in the `result/` folder.
 
 ## Diagram of the pipeline
 Here is the Mermaid diagram of the pipeline.
