@@ -1,24 +1,24 @@
 # ShotgunMG
 
 ```
-              _____ _           _                    __  __  _____ 
-             / ____| |         | |                  |  \/  |/ ____|  
-            | (___ | |__   ___ | |_ __ _ _   _ _ __ | \  / | |  __ 
-             \___ \| '_ \ / _ \| __/ _` | | | | '_ \| |\/| | | |_ |
-             ____) | | | | (_) | || (_| | |_| | | | | |  | | |__| |
-            |_____/|_| |_|\___/ \__\__, |\__,_|_| |_|_|  |_|\_____|
-                                    __/ |                          
-                                   |___/    for N E X T F L O W 
-
-                Github: https://github.com/jtremblay/ShotgunMG
-             Home page: jtremblay.github.io/shotgunmg.html
+                _____ _           _                    __  __  _____ 
+               / ____| |         | |                  |  \/  |/ ____|  
+              | (___ | |__   ___ | |_ __ _ _   _ _ __ | \  / | |  __ 
+               \___ \| '_ \ / _ \| __/ _` | | | | '_ \| |\/| | | |_ |
+               ____) | | | | (_) | || (_| | |_| | | | | |  | | |__| |
+              |_____/|_| |_|\___/ \__\__, |\__,_|_| |_|_|  |_|\_____|
+                                      __/ |                          
+                                     |___/    for N E X T F L O W 
+  
+                  Github: https://github.com/jtremblay/ShotgunMG
+               Home page: jtremblay.github.io/shotgunmg.html
 ```
 
 This repository contains an implementation of the ShotgunMG pipeline (https://doi.org/10.1093/bib/bbac443) for Nextflow. The original pipeline implemented with the GenPipes workflow management system is available here: https://bitbucket.org/jtremblay514/nrc_pipeline_public.
 
 All the modules defined in the `shotgunmg.config` file should be installed and functional. The nrc_tools utilities can be found here: https://bitbucket.org/jtremblay514/nrc_tools_public . Briefly, this pipeline takes a set of raw reads (i.e. short Illumina reads), performs quality control and co-assemble the QC-controlled reads. These reads are then mapped against the co-assembly to generate contig and gene abundance matrices. The co-assembly is also processed through a gene caller (i.e. Prodigal). Resulting genes are functionally annotated using hmmsearch vs pfam; hmmsearch vs kofam and rpsblast vs COG. Taxonomic annotations are assigned using the CAT package. Finally, MAGs are generated using MetaBAT2. End results are included in the `output/` directory. Ultimately, this pipeline processes raw fastqs into gene and contig abundance matrices and functional and taxonomic annotation files.
 
-A replicated simple mock community dataset is available here https://doi.org/10.5281/zenodo.7140751 and is a good dataset to test this pipeline. A fully functional implementation of the pipeline is available as a Docker image: https://cloud.docker.com/u/julio514/repository/docker/julio514/centos (available soon)
+A replicated simple mock community dataset is available here https://doi.org/10.5281/zenodo.7140751 and is a good dataset to test this pipeline. A fully functional implementation of the pipeline is available as a Docker image: https://cloud.docker.com/u/julio514/repository/docker/julio514/centos. Note that the complete pipeline won't be able to run as is using the Docker image, because the size of the required databases (for the annotation steps) are way too large to fit on an image. We had success in manually installing the required database on our systems and then execute the pipeline from the Docker image using Singularity.
 
 This project is in development - more coming soon. In particular, support for metaSPADes (for co-assembly step) and BBMAP (for mapping reads against co-assembly) will soon be implemented.
 
@@ -31,7 +31,7 @@ This project is in development - more coming soon. In particular, support for me
 </figure>
 
 ## Usage
-Once Nextflow (and an appropriate version of Java) is installed, you can run the pipeline like this:
+Once Nextflow (and an appropriate version of Java) is installed, you can clone this repository and configure the `shotgunmg.config` file according to your needs (especially the DEFAULT section where you can specify the raw reads directory). The pipeline can then by run like this:
 ```
 nextflow run -c ./shotgunmg.config ./shotgunmg.nf -resume
 ```
@@ -75,7 +75,7 @@ Available here: http://jtremblay.github.io/files/contaminants.tar.gz. Contains k
 ### KEGG
 KEGG orthologs (KO) assignment is done using kofamscan available here: https://www.genome.jp/ftp/tools/kofam_scan/kofam_scan-1.3.0.tar.gz. In order to run kofamscan, you will need to have the HMM profiles of each KO - available here: https://www.genome.jp/ftp/db/kofam/profiles.tar.gz - and also the KO link file - available here: https://www.genome.jp/ftp/db/kofam/ko_list.gz. Another file needed to link each KO to their associated pathway and/or module is available here: https://https://jtremblay.github.io/files/kegg_ref_pathways_modules_combined.tsv.gz.
 Once downloaded, uncompress these files and move them into their location which should be $INSTALL_HOME/databases/kofam/<date>/. Double check their path in the .ini file under the [kofamscan] and [parse_kofam] sections.
-KOfamscan generates lots of intermediate files which can actually make it impossible to use for large metagenomes. To circumvent this issue, you can concatenate all kofam individual profiles (```cat ./profiles/K* > kofam.hmm``` and run hmmpress ```hmmpress kofam.hmm```). Once done this kofam.hmm file can be used with the ```hmmsearch``` software - see KEGG section downstream. Our internal benchmarks showed that hmmsearch and kofamscan gave identical results (i.e. for both methods, each gene pointed to the same KO).
+KOfamscan generates lots of intermediate files which can actually make it impossible to use for large metagenomes. To circumvent this issue, you can concatenate all kofam individual profiles (```cat ./profiles/K* > kofam.hmm``` and run hmmpress ```hmmpress kofam.hmm```). Once done this kofam.hmm file can be used with the ```hmmsearch``` software. Our internal benchmarks showed that hmmsearch and kofamscan gave identical results (i.e. for both methods, each gene pointed to the same KO).
 
 
 ## Setting up files needed by the pipeline
