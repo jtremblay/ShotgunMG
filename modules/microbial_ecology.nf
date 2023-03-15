@@ -87,13 +87,13 @@ process ALPHA_DIVERSITY_CONTIGS{
         generateDepthPointsForRarefaction.pl \\
             --remove_last_col false \\
             --infile ${contig_abundance} \\
-            --number_of_points ${params.alphadiv.number_of_points} \\
+            --number_of_points ${params.alpha_diversity.number_of_points} \\
             > depth_list.txt && \\
         sed '1 s/^\\S\\+\\t/\\t/' ${contig_abundance} > tmp.tsv && \\
         rtk swap \\
             -i tmp.tsv \\
             -o ./ \\
-            -r ${params.alphadiv.perm} \\
+            -r ${params.alpha_diversity.perm} \\
             -d `cat depth_list.txt` && \\
         rm tmp.tsv && \\
         touch rtk.done
@@ -119,13 +119,13 @@ process ALPHA_DIVERSITY_GENES{
         generateDepthPointsForRarefaction.pl \\
             --remove_last_col false \\
             --infile ${gene_abundance} \\
-            --number_of_points ${params.alphadiv.number_of_points} \\
+            --number_of_points ${params.alpha_diversity.number_of_points} \\
             > depth_list.txt && \\
         sed '1 s/^\\S\\+\\t/\\t/' ${gene_abundance} > tmp.tsv && \\
         rtk swap \\
             -i tmp.tsv \\
             -o ./ \\
-            -r ${params.alphadiv.perm} \\
+            -r ${params.alpha_diversity.perm} \\
             -d `cat depth_list.txt` && \\
         rm tmp.tsv && \\
         touch rtk.done
@@ -184,13 +184,13 @@ process ALPHA_DIVERSITY_RPOB{
         generateDepthPointsForRarefaction.pl \\
             --remove_last_col false \\
             --infile ${gene_abundance} \\
-            --number_of_points ${params.alphadiv.number_of_points} \\
+            --number_of_points ${params.alpha_diversity.number_of_points} \\
             > depth_list.txt && \\
         sed '1 s/^\\S\\+\\t/\\t/' ${gene_abundance} > tmp.tsv && \\
         rtk swap \\
             -i tmp.tsv \\
             -o ./ \\
-            -r ${params.alphadiv.perm} \\
+            -r ${params.alpha_diversity.perm} \\
             -d `cat depth_list.txt` && \\
         rm tmp.tsv && \\
         touch rtk.done
@@ -216,13 +216,13 @@ process ALPHA_DIVERSITY_RECA{
         generateDepthPointsForRarefaction.pl \\
             --remove_last_col false \\
             --infile ${gene_abundance} \\
-            --number_of_points ${params.alphadiv.number_of_points} \\
+            --number_of_points ${params.alpha_diversity.number_of_points} \\
             > depth_list.txt && \\
         sed '1 s/^\\S\\+\\t/\\t/' ${gene_abundance} > tmp.tsv && \\
         rtk swap \\
             -i tmp.tsv \\
             -o ./ \\
-            -r ${params.alphadiv.perm} \\
+            -r ${params.alpha_diversity.perm} \\
             -d `cat depth_list.txt` && \\
         rm tmp.tsv && \\
         touch rtk.done

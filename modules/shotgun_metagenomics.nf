@@ -5,9 +5,9 @@
 process TRIMMOMATIC {
     publishDir "$params.DEFAULT.outdir/qced_reads/", mode: 'symlink'
     debug true
-    cpus params.fake_trimmomatic.cluster_cpus
-    memory params.fake_trimmomatic.cluster_memory
-    time params.fake_trimmomatic.cluster_time
+    cpus params.trimmomatic.cluster_cpus
+    memory params.trimmomatic.cluster_memory
+    time params.trimmomatic.cluster_time
 
 
     input:
@@ -45,9 +45,9 @@ process TRIMMOMATIC {
 process BBDUK {
     publishDir "$params.DEFAULT.outdir/qced_reads/", mode: 'symlink'
     debug true
-    cpus params.fake_bbduk.cluster_cpus
-    memory params.fake_bbduk.cluster_memory
-    time params.fake_bbduk.cluster_time
+    cpus params.bbduk.cluster_cpus
+    memory params.bbduk.cluster_memory
+    time params.bbduk.cluster_time
 
     input:
         tuple val(sample_id), path(infile_R1), path(infile_R2)

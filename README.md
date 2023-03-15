@@ -14,11 +14,10 @@
                Home page: jtremblay.github.io/shotgunmg.html
 ```
 
-This repository contains an implementation of the ShotgunMG pipeline (https://doi.org/10.1093/bib/bbac443) for Nextflow. The original pipeline implemented with the GenPipes workflow management system is available here: https://bitbucket.org/jtremblay514/nrc_pipeline_public and an exhaustive user guide here: https://jtremblay.github.io/shotgunmg_guide_v1.3.2.html.
+This repository contains an implementation of the ShotgunMG pipeline (https://doi.org/10.1093/bib/bbac443) for Nextflow. The original pipeline implemented with the GenPipes workflow management system is available here: https://bitbucket.org/jtremblay514/nrc_pipeline_public and an exhaustive user guide here: https://jtremblay.github.io/shotgunmg_guide_v1.3.2.html. Briefly, this pipeline takes a set of raw reads (i.e. short Illumina reads), performs quality control and co-assemble the QC-controlled reads. These reads are then mapped against the co-assembly to generate contig and gene abundance matrices. The co-assembly is also processed through a gene caller (i.e. Prodigal). Resulting genes are functionally annotated using hmmsearch vs pfam; hmmsearch vs kofam and rpsblast vs COG. Taxonomic annotations are assigned using the CAT package. Finally, MAGs are generated using MetaBAT2. Ultimately, this pipeline processes raw fastqs into gene and contig abundance matrices (how many reads per sample par gene or contig) and functional and taxonomic annotation files.
 
-All the modules defined in the `shotgunmg.config` file should be installed and functional. The nrc_tools utilities can be found here: https://bitbucket.org/jtremblay514/nrc_tools_public . Briefly, this pipeline takes a set of raw reads (i.e. short Illumina reads), performs quality control and co-assemble the QC-controlled reads. These reads are then mapped against the co-assembly to generate contig and gene abundance matrices. The co-assembly is also processed through a gene caller (i.e. Prodigal). Resulting genes are functionally annotated using hmmsearch vs pfam; hmmsearch vs kofam and rpsblast vs COG. Taxonomic annotations are assigned using the CAT package. Finally, MAGs are generated using MetaBAT2. Ultimately, this pipeline processes raw fastqs into gene and contig abundance matrices (how many reads per sample par gene or contig) and functional and taxonomic annotation files.
 
-A replicated simple mock community dataset is available here https://doi.org/10.5281/zenodo.7140751 and is a good dataset to test this pipeline. A fully functional implementation of the pipeline is available as a Docker image: https://cloud.docker.com/u/julio514/repository/docker/julio514/centos. Note that the complete pipeline won't be able to run as is using the Docker image, because the size of the required databases (for the annotation steps) are way too large to fit on an image. We had success in manually installing the required database on our systems and then execute the pipeline from the Docker image using Singularity. Once loaded, the test project folder can be found at this location on the image: `/project/microbiome_genomics/projects/mock_community_shotgunmg_demo/shotgunmg_nextflow`.
+
 
 This project is in development - more coming soon. In particular, support for metaSPADes (for co-assembly step) and BBMAP (for mapping reads against co-assembly) will soon be implemented.
 
@@ -36,7 +35,10 @@ Once Nextflow (and an appropriate version of Java) is installed, you can clone t
 nextflow run -c ./shotgunmg.config ./shotgunmg.nf -resume
 ```
 
-In the ```shotgun.config``` file are all the parameters used for every steps of the pipeline. There you can customize the amounts of resources of each step, depending on this size and complexity of the dataset to analyze. The pipeline relies on environment modules (https://modules.readthedocs.io/en/latest/) which means that each software required by the pipeline have to be available through a module. For instance, for the co-assembly step, the MEGAHIT should be made available by first loading the module : (i.e. ```module load nrc/megahit/1.2.9```) and then running the software (i.e. ```megahit -h```).
+All the modules defined in the `shotgunmg.config` file should be properly installed and functional. In the config file are all the parameters used for every steps of the pipeline. There you can customize the amounts of requested resources for each step, depending on this size and complexity of the dataset to analyze. The pipeline relies on environment modules (https://modules.readthedocs.io/en/latest/) which means that each software required by the pipeline have to be available through a module. For instance, for the co-assembly step, the MEGAHIT should be made available by first loading the module : (i.e. `module load nrc/megahit/1.2.9`) and then running the software (i.e. `megahit -h`).The `nrc_tools` bioinformatic utilities can be found here: https://bitbucket.org/jtremblay514/nrc_tools_public. A replicated simple mock community dataset is available here https://doi.org/10.5281/zenodo.7140751 and is a good dataset to test this pipeline. 
+
+A fully functional implementation of the pipeline is available as a Docker image: https://cloud.docker.com/u/julio514/repository/docker/julio514/centos. Note that the complete pipeline won't be able to run as is using the Docker image, because the size of the required databases (for the annotation steps) are way too large to be practical on an image. We had success in manually installing the required database on our systems and then execute the pipeline from the Docker image using Singularity. Once the image loaded, the test project folder can be found at this location on the image: `/project/microbiome_genomics/projects/mock_community_shotgunmg_demo/shotgunmg_nextflow`.
+
 
 ## Databases
 The pipeline relies on many databases in order to run the various annotations. The full path of each database have to be specified in the `shotgunmg.config` file. For instance, the PFAM hmm profiles should be specified in under the `params.pfam.db` section as follows in the `.config` file:
@@ -49,7 +51,6 @@ params{
     }
     ...
 ```
-
 
 ### CAT
 Go here - https://github.com/dutilh/CAT - and follow the instructions under the preconstructed databases section,
@@ -189,6 +190,13 @@ flowchart TD
     p97(( ))
     p98[ALPHA_DIVERSITY_RECA]
     p99(( ))
+    p100([map])
+    p101([collect])
+    p102[METABAT_ABUNDANCE]
+    p103([collect])
+    p104[METABAT2]
+    p105[CHECKM_METABAT2]
+    p106(( ))
     p0 -->|raw_reads_channel| p1
     p1 --> p4
     p1 --> p3
@@ -308,4 +316,12 @@ flowchart TD
     p95 --> p98
     p96 --> p97
     p98 --> p99
+    p30 --> p100
+    p100 --> p101
+    p101 --> p102
+    p102 --> p104
+    p20 -->|ch_assembly| p103
+    p103 --> p104
+    p104 --> p105
+    p105 --> p106
 ```

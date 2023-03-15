@@ -99,6 +99,13 @@ flowchart TD
     p97(( ))
     p98[ALPHA_DIVERSITY_RECA]
     p99(( ))
+    p100([map])
+    p101([collect])
+    p102[METABAT_ABUNDANCE]
+    p103([collect])
+    p104[METABAT2]
+    p105[CHECKM_METABAT2]
+    p106(( ))
     p0 -->|raw_reads_channel| p1
     p1 --> p4
     p1 --> p3
@@ -218,3 +225,11 @@ flowchart TD
     p95 --> p98
     p96 --> p97
     p98 --> p99
+    p30 --> p100
+    p100 --> p101
+    p101 --> p102
+    p102 --> p104
+    p20 -->|ch_assembly| p103
+    p103 --> p104
+    p104 --> p105
+    p105 --> p106
