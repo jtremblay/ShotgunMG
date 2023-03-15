@@ -6,7 +6,7 @@ All the modules defined in the `shotgunmg.config` file should be installed and f
 
 A replicated simple mock community dataset is available here https://doi.org/10.5281/zenodo.7140751 and is a good dataset to test this pipeline. A fully functional implementation of the pipeline is available as a Docker image: https://cloud.docker.com/u/julio514/repository/docker/julio514/centos
 
-This project is in development - more coming soon.
+This project is in development - more coming soon. In particular, support for metaSPADes (for co-assembly step) and BBMAP (for mapping reads against co-assembly) will soon be implemented.
 
 ```
 ###############################################################################
@@ -41,7 +41,17 @@ nextflow run -c ./shotgunmg.config ./shotgunmg.nf -resume
 In the ```shotgun.config``` file are all the parameters used for every steps of the pipeline. There you can customize the amounts of resources of each step, depending on this size and complexity of the dataset to analyze. The pipeline relies on environment modules (https://modules.readthedocs.io/en/latest/) which means that each software required by the pipeline have to be available through a module. For instance, for the co-assembly step, the MEGAHIT should be made available by first loading the module : (i.e. ```module load nrc/megahit/1.2.9```) and then running the software (i.e. ```megahit -h```).
 
 ## Databases
-The pipeline relies on many databases in order to run the various annotations.
+The pipeline relies on many databases in order to run the various annotations. The full path of each database have to be specified in the `shotgunmg.config` file. For instance, the PFAM hmm profiles should be specified in under the `params.pfam.db` section as follows in the `.config` file:
+
+```
+params{ 
+    ...
+    pfam {
+        db = "/path_to/databases/pfam/Pfam-A.hmm"
+    }
+    ...
+```
+
 
 ### CAT
 Go here - https://github.com/dutilh/CAT - and follow the instructions under the preconstructed databases section,
